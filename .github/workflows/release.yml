@@ -1,0 +1,62 @@
+name: Release
+
+on:
+  push:
+    tags: "*"
+
+jobs:
+  draft:
+    name: Create GitHub draft release
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version: [8.2]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Get Repository Name
+        id: get-repo-name
+        run: |
+          echo "APP_NAME=${GITHUB_REPOSITORY##*/}" >> $GITHUB_ENV
+
+      - name: Build .phar
+        run: php -dphar.readonly=0 build/make-phar.php ${{ env.APP_NAME }} ${{ github.sha }}
+
+      - name: Get tag versions
+        id: get-versions
+        run: |
+            VERSION=$(echo "${GITHUB_REF#refs/tags/}" | sed 's/-.*//')
+            echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Generate build info
+        run: |
+          php build/generate-build-info-json.php \
+            ${{ github.sha }} \
+            ${{ steps.get-versions.outputs.VERSION }} \
+            ${{ github.repository }} \
+            ${{ github.run_number }} \
+            ${{ github.run_id }} \
+          > build_info.json    
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release_artifacts
+          path: |
+            ${{ github.workspace }}/${{ env.APP_NAME }}.phar
+            ${{ github.workspace }}/build_info.json
+
+      - name: Create draft release
+        uses: ncipollo/release-action@v1.14.0
+        with:
+          artifacts: ${{ github.workspace }}/${{ env.APP_NAME }}.phar,${{ github.workspace }}/build_info.json
+          commit: ${{ github.sha }}
+          draft: true
+
+          name: ${{ env.APP_NAME }} ${{ steps.get-versions.outputs.VERSION }}
+          tag: ${{ steps.get-versions.outputs.VERSION }} 
+          token: ${{ secrets.GITHUB_TOKEN }}
