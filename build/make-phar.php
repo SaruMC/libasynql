@@ -52,10 +52,10 @@ function createPhar(string $gitHash): void {
         // Set a more generic stub since the specific path might not exist
         $phar->setStub("<?php __HALT_COMPILER(); ?>");
         
-        $filesAdded = addFilesToPhar($phar, SRC_DIR, "libasynql/src/");
+        $filesAdded = addFilesToPhar($phar, SRC_DIR, "src/");
         echo "Added $filesAdded files from source directory\n";
         
-        addFileToPhar($phar, VIRION_FILE, "libasynql/virion.yml");
+        addFileToPhar($phar, VIRION_FILE, "virion.yml");
         
         $phar->setMetadata([
             'git_hash' => $gitHash,
