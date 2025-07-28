@@ -1,35 +1,29 @@
 name: Release
-
 permissions:
   contents: write
-
 on:
   push:
     tags:
-      - '*'   # Corrigé
-
+      - '*'
 jobs:
   draft:
     name: Create GitHub draft release
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest  # Updated from ubuntu-20.04
+    timeout-minutes: 30     # Add timeout to prevent indefinite hanging
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: true
-
       - name: Get Repository Name
         id: get-repo-name
         run: echo "APP_NAME=${GITHUB_REPOSITORY##*/}" >> $GITHUB_ENV
-
       - name: Build .phar
         run: php -dphar.readonly=0 build/make-phar.php ${{ env.APP_NAME }} ${{ github.sha }}
-
       - name: Get tag versions
         id: get-versions
         run: |
           VERSION=$(echo "${GITHUB_REF#refs/tags/}" | sed 's/-.*//')
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-
       - name: Generate build info
         run: |
           php build/generate-build-info-json.php \
@@ -38,8 +32,7 @@ jobs:
             ${{ github.repository }} \
             ${{ github.run_number }} \
             ${{ github.run_id }} \
-          > build_info.json    
-
+          > build_info.json
       - name: Upload release artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -47,7 +40,6 @@ jobs:
           path: |
             ${{ github.workspace }}/${{ env.APP_NAME }}.phar
             ${{ github.workspace }}/build_info.json
-
       - name: Create draft release
         uses: ncipollo/release-action@v1.14.0
         with:
